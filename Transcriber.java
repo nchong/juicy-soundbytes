@@ -29,7 +29,6 @@ public class Transcriber implements Runnable {
   
   // @Override
   public void run() {
-    int n = 0;
     while (true) {
       try {
         ByteArrayOutputStream wav = queue.take();
