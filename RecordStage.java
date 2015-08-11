@@ -16,9 +16,9 @@ public class RecordStage implements Runnable {
     this.queue = queue;
     this.format = new AudioFormat(/*sampleRate =*/ SAMPLE_RATE,
       /*sampleSizeInBits =*/ 16,
-      /*channels =*/ 2,
+      /*channels =*/ 1,
       /*signed =*/ true,
-      /*bigEndian =*/ false);
+      /*bigEndian =*/ true);
     this.info = new DataLine.Info(TargetDataLine.class, format);
   }
 
@@ -43,6 +43,7 @@ public class RecordStage implements Runnable {
           new AudioInputStream(source, format, (long)(numSecondsPerPacket * SAMPLE_RATE)),
           FILE_TYPE,
           outputPacket);
+        outputPacket.close();
         queue.put(outputPacket);
         n++;
       }

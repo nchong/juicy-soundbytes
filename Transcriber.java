@@ -10,6 +10,8 @@ import java.net.URL;
 import java.net.URLConnection;
 import org.apache.commons.io.IOUtils;
 import java.util.concurrent.*;
+import org.json.*;
+
 
 /**
  *
@@ -32,13 +34,15 @@ public class Transcriber implements Runnable {
     while (true) {
       try {
         ByteArrayOutputStream wav = queue.take();
+        String text = process(wav);
+        System.out.println(text);
       } catch (Exception e) {
         e.printStackTrace();
       }
     }
   }
   
-  public void process(ByteArrayOutputStream wav) throws Exception {
+  public String process(ByteArrayOutputStream wav) throws Exception {
     // Create connection
     URL url = new URL(uri);
     HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -56,7 +60,25 @@ public class Transcriber implements Runnable {
     out.close();
 
     //Get Response
-    InputStream is = connection.getInputStream();
-    IOUtils.copy(is, System.out);
+    BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+    String line = null;
+    
+    String ignore = in.readLine(); // skip first empty results line
+    //System.out.println("ignore = " + ignore);
+
+    StringBuilder responseData = new StringBuilder();
+    while((line = in.readLine()) != null) {
+        responseData.append(line);
+    }
+    
+    String result = responseData.toString();
+    
+    if (!result.isEmpty()) {
+      JSONObject obj = new JSONObject(result);
+      String text = obj.getJSONArray("result").getJSONObject(0).getJSONArray("alternative").getJSONObject(0).getString("transcript");
+      return text;
+    }
+    
+    return "";
   }
 }
