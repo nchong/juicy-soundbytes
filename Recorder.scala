@@ -36,9 +36,9 @@ class Recorder(
       try {
         // continuously record numSecondsPerPacket chunks of audio
         val outputPacket = new ByteArrayOutputStream()
-        println("Writing " + n + " packet")
-        AudioSystem.write(new AudioInputStream(source, format, numSecondsPerPacket * SAMPLE_RATE) , fileType, outputPacket)
-        queue.put(outputPacket)
+        println("Producing " + n + " packet")
+        AudioSystem.write(new AudioInputStream(source, format, (numSecondsPerPacket * SAMPLE_RATE).toLong) , fileType, outputPacket)
+        outputQueue.put(outputPacket)
         n += 1
       } catch {
         case ex: LineUnavailableException => ex.printStackTrace()
