@@ -1,7 +1,6 @@
 import java.io.*;
 import java.util.concurrent.BlockingQueue;
 import javax.sound.sampled.*;
-import java.io.ByteArrayOutputStream;
 
 public class RecordStage implements Runnable {
   private int numSecondsPerPacket;
