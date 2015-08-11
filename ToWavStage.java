@@ -3,7 +3,8 @@ import java.util.concurrent.BlockingQueue;
 
 public class ToWavStage implements Runnable {
   private BlockingQueue<ByteArrayOutputStream> queue;
-  public void ToWavStage(BlockingQueue<ByteArrayOutputStream> queue) {
+
+  public ToWavStage(BlockingQueue<ByteArrayOutputStream> queue) {
     this.queue = queue;
   }
 

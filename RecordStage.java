@@ -11,14 +11,14 @@ public class RecordStage implements Runnable {
   private DataLine.Info info;
   private final AudioFileFormat.Type FILE_TYPE = AudioFileFormat.Type.WAVE;
 
-  public void RecordStage(int numSecondsPerPacket, BlockingQueue<ByteArrayOutputStream> queue) {
+  public RecordStage(int numSecondsPerPacket, BlockingQueue<ByteArrayOutputStream> queue) {
     this.numSecondsPerPacket = numSecondsPerPacket;
     this.queue = queue;
     this.format = new AudioFormat(/*sampleRate =*/ SAMPLE_RATE,
       /*sampleSizeInBits =*/ 16,
       /*channels =*/ 2,
       /*signed =*/ true,
-      /*bigEndian =*/ true);
+      /*bigEndian =*/ false);
     this.info = new DataLine.Info(TargetDataLine.class, format);
   }
 
