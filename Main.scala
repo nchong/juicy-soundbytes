@@ -1,3 +1,4 @@
+import java.io.{File, IOException}
 import java.util.concurrent.{BlockingQueue, LinkedBlockingQueue}
 import java.io.ByteArrayOutputStream
 
