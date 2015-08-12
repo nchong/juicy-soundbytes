@@ -7,12 +7,7 @@ import org.json.*;
 import java.nio.charset.StandardCharsets;
 
 public class Spotify {
-  private String CLIENT_ID = "6ffd5e293d954967b23aaca32886c340";
-  private String AUTHORIZE_URL = "https://accounts.spotify.com/authorize";
-  private String ACCESS_TOKEN_URL = "https://accounts.spotify.com/api/token";
-  private String CLIENT_SECRET = null;
-
-  private String REDIRECT_URI = "http://localhost"; // dummy
+  private String CLIENT_SECRET;
 
   private String accessToken;
   private String tokenType;
@@ -20,64 +15,60 @@ public class Spotify {
   private String refreshToken;
 
   public Spotify() {
-    CLIENT_SECRET = System.getenv().get("JUICY_SOUNDBYTES_SECRET");
+    CLIENT_SECRET = SpotifyConfig.getEnvSecret();
     if (CLIENT_SECRET == null) {
       System.out.println("ERROR: expected JUICY_SOUNDBYTES_SECRET env variable!");
       throw new RuntimeException();
     }
+    accessToken = SpotifyConfig.getEnvToken();
+    if (hasValidAccessToken()) {
+      System.out.println("Picked up accessToken from environment!");
+    } else {
+      authorize();
+    }
+  }
+
+  private void invalidateAccessToken() {
+    accessToken = null;
+  }
+
+  public boolean hasValidAccessToken() {
+    return (accessToken != null);
   }
 
   private String SEARCH_URL = "https://api.spotify.com/v1/search";
   public void apiSearch(String query, String type) {
-  }
-
-  public void getAccessToken(String code) {
-    HashMap<String, String> params = new HashMap<String, String>();
-    params.put("grant_type", "authorization_code");
-    params.put("code", code);
-    params.put("redirect_uri", REDIRECT_URI);
-    params.put("client_id", CLIENT_ID);
-    params.put("client_secret", CLIENT_SECRET);
+    if (!hasValidAccessToken()) authorize();
+    System.out.println("apiSearch " + query + type);
+    Map<String, String> params = new HashMap<String, String>();
+    params.put("q", query);
+    params.put("type", type);
     try {
-      URL url = new URL(ACCESS_TOKEN_URL);
-      HttpURLConnection connection = postRequest(url, params);
-      InputStream is = connection.getInputStream();
+      HttpURLConnection connection = getRequest(SEARCH_URL, params);
       int responseCode = connection.getResponseCode();
-      if (responseCode != HttpURLConnection.HTTP_OK) {
-        return;
+      System.out.println("responseCode is " + responseCode);
+      if (responseCode == HttpURLConnection.HTTP_OK) {
+        JSONObject json = jsonOfConnection(connection);      
+      } else {
+        invalidateAccessToken();
       }
-      BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-      String line = null;
-      StringBuilder responseData = new StringBuilder();
-      while((line = in.readLine()) != null) {
-          responseData.append(line);
-      }
-      String result = responseData.toString();
-      System.out.println("Response data: " + result);
-      if (result.isEmpty()) return;
-      JSONObject json = new JSONObject(result);
-      accessToken = json.getString("access_token");
-      tokenType = json.getString("token_type");
-      expiresIn = json.getInt("expires_in");
-      refreshToken = json.getString("refresh_token");
-    } catch (Exception e) {
-      System.out.println("ERROR: Problem getting access token!");
+    } catch (IOException e) {
       e.printStackTrace();
-      accessToken = null;
     }
   }
 
   public void authorize() {
+    if (hasValidAccessToken()) { return; }
     while (true) {
       try {
         String state = nextSessionId();
 
         HashMap<String, String> params = new HashMap<String, String>();
-        params.put("client_id", CLIENT_ID);
+        params.put("client_id", SpotifyConfig.CLIENT_ID);
         params.put("response_type", "code");
         params.put("state", state);
-        params.put("redirect_uri", REDIRECT_URI);
-        String url = AUTHORIZE_URL + "/?" + keyValueStringOfParamMap(params);
+        params.put("redirect_uri", SpotifyConfig.REDIRECT_URI);
+        String url = SpotifyConfig.AUTHORIZE_URL + "/?" + keyValueStringOfParamMap(params);
         System.out.println("Please visit " + url);
 
         Scanner scanner = new Scanner(System.in);
@@ -112,6 +103,42 @@ public class Spotify {
     }
   }
 
+  private void getAccessToken(String code) {
+    HashMap<String, String> params = new HashMap<String, String>();
+    params.put("grant_type", "authorization_code");
+    params.put("code", code);
+    params.put("redirect_uri", SpotifyConfig.REDIRECT_URI);
+    params.put("client_id", SpotifyConfig.CLIENT_ID);
+    params.put("client_secret", CLIENT_SECRET);
+    try {
+      URL url = new URL(SpotifyConfig.ACCESS_TOKEN_URL);
+      HttpURLConnection connection = postRequest(url, params);
+      InputStream is = connection.getInputStream();
+      int responseCode = connection.getResponseCode();
+      if (responseCode != HttpURLConnection.HTTP_OK) {
+        return;
+      }
+      JSONObject json = jsonOfConnection(connection);      
+      accessToken = json.getString("access_token");
+      tokenType = json.getString("token_type");
+      expiresIn = json.getInt("expires_in");
+      refreshToken = json.getString("refresh_token");
+    } catch (Exception e) {
+      System.out.println("ERROR: Problem getting access token!");
+      e.printStackTrace();
+      accessToken = null;
+    }
+  }
+
+  private HttpURLConnection getRequest(String urlStr, Map<String, String>params) throws IOException {
+    String paramStr = keyValueStringOfParamMap(params);
+    System.out.println(urlStr + "/?" + paramStr);
+    URL url = new URL(urlStr + "/?" + paramStr);
+    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+    connection.setRequestProperty("Authorization : Bearer", accessToken);
+    return connection;
+  }
+
   private HttpURLConnection postRequest(URL url, Map<String, String>params) throws IOException {
     String paramStr = keyValueStringOfParamMap(params);
     byte[] postData = paramStr.getBytes(StandardCharsets.UTF_8);
@@ -135,7 +162,7 @@ public class Spotify {
   }
 
   private static Map<String, String> splitQuery(URL url) throws UnsupportedEncodingException {
-    Map<String, String> result = new LinkedHashMap<String, String>();
+    Map<String, String> result = new HashMap<String, String>();
     String query = url.getQuery();
     String[] pairs = query.split("&");
     for (String pair : pairs) {
@@ -163,4 +190,20 @@ public class Spotify {
     return paramBuilder.toString();
   }
 
+  private static JSONObject jsonOfConnection(HttpURLConnection connection) throws IOException {
+    BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+    String line = null;
+    StringBuilder responseData = new StringBuilder();
+    while ((line = in.readLine()) != null) {
+      responseData.append(line);
+    }
+    String result = responseData.toString();
+    System.out.println("Response data: " + result);
+    JSONObject json = new JSONObject(result);
+    return json;
+  }
+
+  private static String getEnvVar(String key) {
+    return System.getenv().get(key);
+  }
 }
