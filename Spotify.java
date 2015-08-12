@@ -27,6 +27,10 @@ public class Spotify {
     }
   }
 
+  private String SEARCH_URL = "https://api.spotify.com/v1/search";
+  public void apiSearch(String query, String type) {
+  }
+
   public void getAccessToken(String code) {
     HashMap<String, String> params = new HashMap<String, String>();
     params.put("grant_type", "authorization_code");
@@ -66,17 +70,20 @@ public class Spotify {
   public void authorize() {
     while (true) {
       try {
-        String response_type = "code";
         String state = nextSessionId();
-        String url = AUTHORIZE_URL + "/?";
-        url += "client_id=" + CLIENT_ID;
-        url += "&response_type=" + response_type;
-        url += "&state=" + state;
-        url += "&redirect_uri=" + REDIRECT_URI;
+
+        HashMap<String, String> params = new HashMap<String, String>();
+        params.put("client_id", CLIENT_ID);
+        params.put("response_type", "code");
+        params.put("state", state);
+        params.put("redirect_uri", REDIRECT_URI);
+        String url = AUTHORIZE_URL + "/?" + keyValueStringOfParamMap(params);
         System.out.println("Please visit " + url);
+
         Scanner scanner = new Scanner(System.in);
         System.out.println("And paste the return url> ");
         String input = scanner.nextLine();
+
         URL callback = new URL(input);
         Map<String, String> queryPairs = splitQuery(callback);
         if (!(
@@ -139,7 +146,7 @@ public class Spotify {
     return new BigInteger(130, random).toString(32);
   }
 
-  public static Map<String, String> splitQuery(URL url) throws UnsupportedEncodingException {
+  private static Map<String, String> splitQuery(URL url) throws UnsupportedEncodingException {
     Map<String, String> result = new LinkedHashMap<String, String>();
     String query = url.getQuery();
     String[] pairs = query.split("&");
@@ -152,5 +159,20 @@ public class Spotify {
     return result;
   }
 
+  private static String keyValueStringOfParamMap(Map<String, String> params) {
+    StringBuilder paramBuilder = new StringBuilder();
+    boolean first = true;
+    for (Map.Entry<String, String> p : params.entrySet()) {
+      String key = p.getKey();
+      String val = p.getValue();
+      if (first) {
+        paramBuilder.append(key + "=" + val);
+        first = false;
+      } else {
+        paramBuilder.append("&" + key + "=" + val);
+      }
+    }
+    return paramBuilder.toString();
+  }
 
 }
