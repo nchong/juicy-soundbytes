@@ -113,19 +113,7 @@ public class Spotify {
   }
 
   private HttpURLConnection postRequest(URL url, Map<String, String>params) throws IOException {
-    StringBuilder paramBuilder = new StringBuilder();
-    boolean first = true;
-    for (Map.Entry<String, String> p : params.entrySet()) {
-      String key = p.getKey();
-      String val = p.getValue();
-      if (first) {
-        paramBuilder.append(key + "=" + val);
-        first = false;
-      } else {
-        paramBuilder.append("&" + key + "=" + val);
-      }
-    }
-    String paramStr = paramBuilder.toString();
+    String paramStr = keyValueStringOfParamMap(params);
     byte[] postData = paramStr.getBytes(StandardCharsets.UTF_8);
     int postDataLength = postData.length;
     HttpURLConnection connection = (HttpURLConnection) url.openConnection();
